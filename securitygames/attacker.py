@@ -2,7 +2,12 @@ import networkx as nx
 
 
 class Attacker:
+    """
+    Base attacker class
+    """
     def __init__(self):
+        # TODO: Use of credentials, exploits, malware
+
         self.location = "internet"
         self.credentials = list()
         self.exploits = list()
@@ -40,7 +45,7 @@ class Attacker:
                 print(self.accessible_nodes)
             return False
         elif action == 2:
-            self.accessible_nodes = self._scan_network(net)
+            self.accessible_nodes += self._scan_network(net)
             print(self.accessible_nodes)
             return True
         elif action == 3:
@@ -64,6 +69,15 @@ class Attacker:
                         self.location = node_to_move
                     return lateral_movement
         elif action == 6:
+            if self.is_admin:
+                print("Already administrator!")
+                return False
+            if self.location not in net.nodes:
+                print("Cannot escalate privileges from outside the network. Move to a valid asset.")
+                return False
+            else:
+                privesc_success = self._privesc(net)
+                self.is_admin = privesc_success
             return True
         elif action == 7:
             return True
@@ -74,14 +88,15 @@ class Attacker:
             return False
 
     def _scan_network(self, net):
-        accessible_nodes = list()
         if self.location == "internet":
+            accessible_nodes = list()
             for i in net.nodes:
                 if net.nodes[i]["data"].is_internet_facing:
                     accessible_nodes.append(net.nodes[i]["data"].name)
-            return accessible_nodes
         else:
-            return accessible_nodes
+            accessible_nodes = [n for n in net.neighbors(self.location)]
+        net.detect_scanning(self.location)
+        return accessible_nodes
 
     def _inspect_node(self, net, node_to_inspect):
         print(node_to_inspect)
@@ -98,4 +113,22 @@ class Attacker:
         return False
 
     def _exploit_node(self, net, node_to_exploit):
+        if net.nodes[node_to_exploit]["data"].is_pwnd:
+            print("Asset already pwnd!")
+            return False
+        if node_to_exploit not in self.accessible_nodes:
+            print("That node is not accessible!")
+            return False
+        # TODO: modify exploit_asset to use exploits from attacker exploit list
+        exploit_success = net.nodes[node_to_exploit]["data"].exploit_asset()
+        if exploit_success:
+            print(f"{node_to_exploit} pwnd!")
+            if self.location == "internet":
+                self.location = node_to_exploit
+        else:
+            print(f"{node_to_exploit} not pwnd. :(")
         return True
+
+    def _privesc(self, net):
+        return net.nodes[self.location]["data"].privilege_escalation()
+

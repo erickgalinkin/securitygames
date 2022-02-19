@@ -31,18 +31,26 @@ class Asset:
     def inspect_asset(self):
         return self.log
 
+    def detect_scanning(self, location):
+        if random.random() > 0.5:
+            self.log.append(f"INFO,scanning_from_{location},{self.name}")
+
     def exploit_asset(self):
-        if not self.is_pwnd:
-            p_success = random.random()
-            p_detection = random.random()
-            p_attempt = random.random()
-            if p_attempt > p_success:
-                self.is_pwnd = True
-                if p_detection > 0.5:
-                    self.log.append(f"ALERT,exploitation_succcess,{self.name}")
-            else:
-                if p_detection > p_attempt:
-                    self.log.append(f"ALERT,exploitation_failure,{self.name}")
+        if self.is_pwnd:
+            print("Asset already pwnd!")
+            return True
+        p_success = random.random()
+        p_detection = random.random()
+        p_attempt = random.random()
+        if p_attempt > p_success:
+            self.is_pwnd = True
+            if p_detection > 0.5:
+                self.log.append(f"ALERT,exploitation_succcess,{self.name}")
+            return True
+        else:
+            if p_detection > p_attempt:
+                self.log.append(f"ALERT,exploitation_failure,{self.name}")
+            return False
 
     def lateral_movement(self, is_admin=False):
         if self.is_pwnd or is_admin:
@@ -54,6 +62,21 @@ class Asset:
             return False
         else:
             print("Lateral Movement Failed. Machine not pwnd")
+            return False
+
+    def privilege_escalation(self):
+        p_success = random.random()
+        p_detection = random.random()
+        p_attempt = random.random()
+        if p_attempt > p_success:
+            print("Privilege escalation succeeded!")
+            if p_detection > 0.25:
+                self.log.append(f"ALERT,privesc_succcess,{self.name}")
+            return True
+        else:
+            print("Privilege escalation failed.")
+            if p_detection > 0.1:
+                self.log.append(f"ALERT,privesc_failure,{self.name}")
             return False
 
     def remediate_asset(self):

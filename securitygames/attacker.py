@@ -45,7 +45,9 @@ class Attacker:
                 print(self.accessible_nodes)
             return False
         elif action == 2:
+            # Probably a better way to do this -- Cast to set to deduplication then move back to list.
             self.accessible_nodes += self._scan_network(net)
+            self.accessible_nodes = list(set(self.accessible_nodes))
             print(self.accessible_nodes)
             return True
         elif action == 3:
@@ -80,8 +82,15 @@ class Attacker:
                 self.is_admin = privesc_success
             return True
         elif action == 7:
+            if self.location not in net.nodes:
+                print("Cannot install ransomware from outside the network!")
+                return False
+            if net.nodes[self.location]["data"].is_ransomwared:
+                print("Already installed ransomware!")
+            net.nodes[self.location]["data"].install_malware("ransomware", self.is_admin)
             return True
         elif action == 8:
+            self._execute_ransomware(net)
             return True
         else:
             print("Action not recognized")
@@ -99,13 +108,15 @@ class Attacker:
         return accessible_nodes
 
     def _inspect_node(self, net, node_to_inspect):
-        print(node_to_inspect)
         if node_to_inspect == "current":
             node_to_inspect = self.location
             if node_to_inspect == "internet":
                 print("Nothing to inspect")
                 return False
-        ransomwared = str(net.nodes[node_to_inspect]["data"].ransomwared)
+        if node_to_inspect not in self.accessible_nodes:
+            print("Not a valid node")
+            return False
+        ransomwared = str(net.nodes[node_to_inspect]["data"].is_ransomwared)
         pwnd = str(net.nodes[node_to_inspect]["data"].is_pwnd)
         target = str(net.nodes[node_to_inspect]["data"].is_target) if node_to_inspect in self.accessible_nodes \
             else "Unknown"
@@ -132,3 +143,7 @@ class Attacker:
     def _privesc(self, net):
         return net.nodes[self.location]["data"].privilege_escalation()
 
+    def _execute_ransomware(self, net):
+        for node in self.accessible_nodes:
+            net.nodes[node]["data"].ransom_asset()
+        net.ransom_executed()

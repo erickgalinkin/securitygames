@@ -23,16 +23,18 @@ class Asset:
     def __init__(self):
         self.name = "asset_" + str(random.randint(0, 100))
         self.is_pwnd = False
-        self.ransomwared = False
+        self.is_ransomwared = False
+        self.ransomed = False
         self.is_target = False
         self.is_internet_facing = False
+        self.scanning_aware = False
         self.log = list()
 
     def inspect_asset(self):
         return self.log
 
-    def detect_scanning(self, location):
-        if random.random() > 0.5:
+    def scanned(self, location):
+        if self.scanning_aware:
             self.log.append(f"INFO,scanning_from_{location},{self.name}")
 
     def exploit_asset(self):
@@ -79,10 +81,29 @@ class Asset:
                 self.log.append(f"ALERT,privesc_failure,{self.name}")
             return False
 
+    def install_malware(self, malware_family, is_admin=False):
+        if malware_family == "ransomware":
+            p_success = random.random()
+            p_detect_success = random.random()
+            p_attempt = random.random()
+            if p_attempt > p_success or is_admin:
+                self.is_ransomwared = True
+                print("Ransomware installation succeeded!")
+            else:
+                print("Ransomware installation failed.")
+            if p_detect_success > p_success:
+                print("Ransomware installation attempt detected!")
+                self.log.append(f"ALERT,RANSOMWARE_DETECTED_SUCCESS={str(self.is_ransomwared)},{self.name}")
+            return self.is_ransomwared
+
+    def ransom_asset(self):
+        if self.is_ransomwared:
+            self.ransomed = True
+
     def remediate_asset(self):
         if self.is_pwnd:
             self.is_pwnd = False
-            self.ransomwared = False
+            self.is_ransomwared = False
             return True
 
     def configure_asset_firewall(self):
@@ -129,14 +150,17 @@ class Network(nx.Graph):
     def __init__(self, size=5):
         super(Network, self).__init__()
         self.asset_list = list()
+        self.targets = list()
         self._update_asset_list()
         self._generate_random_network(size)
+        self.ransomed = False
 
     def _generate_random_network(self, size):
         target = Asset()
         target.is_target = True
         target.is_internet_facing = True if random.random() > 0.9 else False
         self.add_node(target.name, data=target)
+        self.targets.append(target.name)
 
         for i in range(size - 1):
             node = Asset()
@@ -162,3 +186,11 @@ class Network(nx.Graph):
                 pwnd_nodes.append(node)
 
         return pwnd_nodes
+
+    def detect_scanning(self, location):
+        if location in self.nodes:
+            for node in self.neighbors(location):
+                self.nodes[node]["data"].scanned(location)
+
+    def ransom_executed(self):
+        self.ransomed = True

@@ -1,12 +1,12 @@
-import networkx as nx
 from securitygames.environment import Network
 from securitygames.attacker import Attacker
-from securitygames.defender import ObliviousDefender
+from securitygames.defender import Defender
 
 GAME_LENGTH = 15
 RANSOM_VALUE = 5
 TARGET_RANSOM_VALUE = 25
 TARGET_PWND_VALUE = 10
+
 
 def attacker_wins(net):
     # TODO: Improve attacker win condition
@@ -17,13 +17,10 @@ def attacker_wins(net):
     return False
 
 
-def defender_wins(net):
-    return False
-
-
 def score_game(net):
     attacker_score = 0
     defender_score = 0
+    defender_score += net.connectivity
     for node in net:
         if net.nodes[node]["data"].is_target:
             if net.nodes[node]["data"].is_pwnd:
@@ -33,7 +30,7 @@ def score_game(net):
             if net.nodes[node]["data"].ransomed:
                 attacker_score += TARGET_RANSOM_VALUE
             else:
-                attacker_score += TARGET_RANSOM_VALUE
+                defender_score += TARGET_RANSOM_VALUE
         else:
             if net.nodes[node]["data"].is_pwnd:
                 attacker_score += 1
@@ -49,7 +46,7 @@ def score_game(net):
 if __name__ == "__main__":
     net = Network()
     attacker = Attacker()
-    defender = ObliviousDefender()
+    defender = Defender()
     for t in range(GAME_LENGTH):
         attacker_done = False
         defender_done = False
@@ -59,11 +56,9 @@ if __name__ == "__main__":
             defender_done = defender.act(net)
         if attacker_wins(net):
             break
-        # TODO: Create defender win condition
-        if defender_wins(net):
-            break
         pwnd_nodes = net.list_pwnd_nodes()
-        print(f"{len(pwnd_nodes)} Nodes pwnd at end of round {t+1}:\n {pwnd_nodes}\n")
+        # TODO: This print statement leaks info to the defender.
+        # print(f"{len(pwnd_nodes)} Nodes pwnd at end of round {t+1}:\n {pwnd_nodes}\n")
     attacker_score, defender_score = score_game(net)
     max_score = attacker_score + defender_score
     print(f"Attacker score: {attacker_score}\n"

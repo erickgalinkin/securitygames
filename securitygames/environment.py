@@ -25,6 +25,7 @@ class Asset:
         self.is_pwnd = False
         self.is_ransomwared = False
         self.ransomed = False
+        self.isolated = False
         self.is_target = False
         self.is_internet_facing = False
         self.scanning_aware = False
@@ -46,12 +47,12 @@ class Asset:
         p_attempt = random.random()
         if p_attempt > p_success:
             self.is_pwnd = True
-            if p_detection > 0.5:
+            if p_detection > 0.7:
                 self.log.append(f"ALERT,exploitation_succcess,{self.name}")
             return True
         else:
             if p_detection > p_attempt:
-                self.log.append(f"ALERT,exploitation_failure,{self.name}")
+                self.log.append(f"WARN,exploitation_failure,{self.name}")
             return False
 
     def lateral_movement(self, is_admin=False):
@@ -72,7 +73,7 @@ class Asset:
         p_attempt = random.random()
         if p_attempt > p_success:
             print("Privilege escalation succeeded!")
-            if p_detection > 0.25:
+            if p_detection > 0.75:
                 self.log.append(f"ALERT,privesc_succcess,{self.name}")
             return True
         else:
@@ -105,10 +106,18 @@ class Asset:
             self.is_pwnd = False
             self.is_ransomwared = False
             return True
+        else:
+            return False
 
     def configure_asset_firewall(self):
+        was_internet_facing = self.is_internet_facing
         self.is_internet_facing = False
-        return True
+        return was_internet_facing
+
+    def quarantine(self):
+        print(f"Node {self.name} isolated!")
+        self.isolated = True
+        self.is_internet_facing = False
 
 
 class Server(Asset):
@@ -154,6 +163,7 @@ class Network(nx.Graph):
         self._update_asset_list()
         self._generate_random_network(size)
         self.ransomed = False
+        self.connectivity = size
 
     def _generate_random_network(self, size):
         target = Asset()
@@ -194,3 +204,10 @@ class Network(nx.Graph):
 
     def ransom_executed(self):
         self.ransomed = True
+
+    def apply_firewall(self, node):
+        firewall_config = self.nodes[node]["data"].configure_asset_firewall()
+        if firewall_config:
+            self.connectivity -= 2
+            print(f"{node} firewall applied! Connectivity is reduced.")
+        return firewall_config

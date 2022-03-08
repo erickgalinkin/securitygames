@@ -1,13 +1,9 @@
-import networkx as nx
-
-
 class Attacker:
     """
     Base attacker class
     """
     def __init__(self):
         # TODO: Use of credentials, exploits, malware
-
         self.location = "internet"
         self.credentials = list()
         self.exploits = list()
@@ -16,15 +12,20 @@ class Attacker:
         self.is_admin = False
 
     def act(self, net):
+        if self.location in net.nodes:
+            if net.nodes[self.location]["data"].isolated:
+                print("You were on a node that was isolated from the network and have been disconnected.")
+                self.accessible_nodes.remove(self.location)
+                self.location = "internet"
         input_string = f""" You are currently at location: {self.location}
         Choose your action:
         [1] Show accessible nodes
         [2] Scan for accessible nodes
         [3] Inspect a node
-        [4] Exploit a node
-        [5] Move laterally to a node
-        [6] Escalate privileges
-        [7] Install ransomware
+        [4] Exploitation attempt
+        [5] Lateral movement attempt
+        [6] Privilege escalation attempt
+        [7] Install ransomware on current node attempt
         [8] Execute ransomware\n
         """
         action = input(input_string).strip()

@@ -48,7 +48,7 @@ class Defender:
             if node_to_firewall not in net.nodes:
                 print("Please select a valid node.")
                 return False
-            firewall_applied = net.apply_firewall(node_to_firewall)
+            firewall_applied = self._apply_firewall(net, node_to_firewall)
             if not firewall_applied:
                 print("Firewall not applied. The node is not internet-facing.")
             return firewall_applied
@@ -61,7 +61,7 @@ class Defender:
             return True
         elif action == 6:
             node_to_remediate = input("Input a node to remediate.\t")
-            remediated = net.nodes[node_to_remediate]["data"].remediate_asset()
+            remediated = self._remediate_node(net, node_to_remediate)
             if remediated:
                 print(f"{node_to_remediate} remediated!")
             return remediated
@@ -81,7 +81,7 @@ class Defender:
                 item_components = item.split(",")
                 if item_components[0] == "ALERT":
                     alert_list.append(item)
-        new_alerts = True if len(alert_list) > len(self.alerts) else False
+        new_alerts = True if alert_list != self.alerts else False
         self.alerts = alert_list
         return new_alerts
 
@@ -101,8 +101,7 @@ class Defender:
         nodes_of_interest = set()
         if self.alerts:
             for alert in self.alerts:
-                alert_components = alert.split(",")
-                node_of_interest = alert_components[-1]
+                node_of_interest, _ = self._parse_alert(alert)
                 nodes_of_interest.add(node_of_interest)
         for i in net.nodes:
             logs = net.nodes[i]["data"].inspect_asset()
@@ -118,7 +117,8 @@ class Defender:
                         suspicious_logs.append(item)
         return suspicious_logs
 
-    def _do_nothing(self):
+    @staticmethod
+    def _do_nothing(*args):
         print("Defender took no action.")
         return True
 
@@ -131,6 +131,22 @@ class Defender:
         net.connectivity -= edge_count
         print("Connectivity is reduced!")
 
+    @staticmethod
+    def _parse_alert(alert):
+        alert_components = alert.split(",")
+        affected_node = alert_components[2]
+        alert_msg = alert_components[1]
+        return affected_node, alert_msg
+
+    @staticmethod
+    def _remediate_node(net, node):
+        return net.nodes[node]["data"].remediate_asset()
+
+    @staticmethod
+    def _apply_firewall(net, node):
+        firewall_applied = net.apply_firewall(node)
+        return firewall_applied
+
 
 class ObliviousDefender(Defender):
     def __init__(self):
@@ -139,3 +155,29 @@ class ObliviousDefender(Defender):
 
     def act(self, net):
         return self._do_nothing()
+
+
+# Default class for simulation
+class PassiveDefender(Defender):
+    def __init__(self):
+        super(PassiveDefender, self).__init__()
+
+    def act(self, net):
+        new_alerts = self._check_alerts(net)
+        if not new_alerts:
+            return True
+        active_alert = self.alerts[0]
+        affected_node, alert_msg = self._parse_alert(active_alert)
+        action = self.next_best_action(net, affected_node, alert_msg)
+        return action
+
+    def next_best_action(self, net, affected_node, alert_msg):
+        action_map = {"RANSOMWARE_DETECTED_SUCCESS=TRUE": self._remediate_node,
+                      "RANSOMWARE_DETECTED_SUCCESS=FALSE": self._apply_firewall,
+                      "privesc_succcess": self._remediate_node,
+                      "privesc_failure": self._remediate_node,
+                      "psexec_attempt": self._do_nothing
+                      }
+        action = action_map.get(alert_msg, self._do_nothing)
+        result = action(net, affected_node)
+        return True

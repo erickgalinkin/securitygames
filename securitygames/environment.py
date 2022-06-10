@@ -103,6 +103,7 @@ class Asset:
 
     def remediate_asset(self):
         if self.is_pwnd:
+            self.clear_log()
             self.is_pwnd = False
             self.is_ransomwared = False
             return True
@@ -118,6 +119,9 @@ class Asset:
         print(f"Node {self.name} isolated!")
         self.isolated = True
         self.is_internet_facing = False
+
+    def clear_log(self):
+        self.log = list()
 
 
 class Server(Asset):

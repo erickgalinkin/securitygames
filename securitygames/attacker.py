@@ -46,9 +46,7 @@ class Attacker:
                 print(self.accessible_nodes)
             return False
         elif action == 2:
-            # Probably a better way to do this -- Cast to set to deduplication then move back to list.
-            self.accessible_nodes += self._scan_network(net)
-            self.accessible_nodes = list(set(self.accessible_nodes))
+            self._scan_network(net)
             print(self.accessible_nodes)
             return True
         elif action == 3:
@@ -106,7 +104,9 @@ class Attacker:
         else:
             accessible_nodes = [n for n in net.neighbors(self.location)]
         net.detect_scanning(self.location)
-        return accessible_nodes
+        self.accessible_nodes += accessible_nodes
+        self.accessible_nodes = list(set(self.accessible_nodes))
+        return True
 
     def _inspect_node(self, net, node_to_inspect):
         if node_to_inspect == "current":
@@ -148,3 +148,34 @@ class Attacker:
         for node in self.accessible_nodes:
             net.nodes[node]["data"].ransom_asset()
         net.ransom_executed()
+
+
+class DefaultAttacker(Attacker):
+    def __init__(self):
+        super(DefaultAttacker, self).__init__()
+        self.scanned_from = list()
+
+    def act(self, net):
+        if self.location == "internet" and len(self.accessible_nodes) == 0:
+            return self._scan_network(net)
+        elif len(self.accessible_nodes - self.scanned_from) == 0:
+            return self._scan_network(net)
+        elif self.location == "internet" and len(self.accessible_nodes) > 0:
+            node = self.choose_best_node()
+            self._exploit_node(net, self.accessible_nodes[0])
+        elif
+
+    def _inspect_node(self, net, node_to_inspect):
+        if node_to_inspect == "current":
+            node_to_inspect = self.location
+            if node_to_inspect == "internet":
+                print("Nothing to inspect")
+                return False
+        if node_to_inspect not in self.accessible_nodes:
+            print("Not a valid node")
+            return False
+        ransomwared = str(net.nodes[node_to_inspect]["data"].is_ransomwared)
+        pwnd = str(net.nodes[node_to_inspect]["data"].is_pwnd)
+        target = str(net.nodes[node_to_inspect]["data"].is_target) if node_to_inspect in self.accessible_nodes \
+            else "Unknown"
+        return ransomwared, pwnd, target

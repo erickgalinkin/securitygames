@@ -1,11 +1,11 @@
 from securitygames.environment import Network
 from securitygames.attacker import Attacker
-from securitygames.defender import Defender
+from securitygames.defender import PassiveDefender
+from argparse import ArgumentParser
+from configparser import ConfigParser
 
-GAME_LENGTH = 15
-RANSOM_VALUE = 5
-TARGET_RANSOM_VALUE = 25
-TARGET_PWND_VALUE = 10
+parser = ArgumentParser(description="Play or simulate security games.")
+parser.add_argument("-c", "--config", action='store', type=str, help="Path to configuration file")
 
 
 def attacker_wins(net):
@@ -44,9 +44,19 @@ def score_game(net):
 
 
 if __name__ == "__main__":
-    net = Network()
+    args = parser.parse_args()
+    if args.config:
+        config = ConfigParser()
+        config.read(args.config)
+        GAME_LENGTH = config['DEFAULT']['GAMELENGTH'] if 'GAMELENGTH' in config['DEFAULT'] else 15
+        RANSOM_VALUE = config['DEFAULT']['RANSOMVALUE'] if 'RANSOMVALUE' in config['DEFAULT'] else 5
+        TARGET_RANSOM_VALUE = config['DEFAULT']['TGTRANSOMVALUE'] if 'TGTRANSOMVALUE' in config['DEFAULT'] else 25
+        TARGET_PWND_VALUE = config['DEFAULT']['TGTPWNDVALUE'] if 'TGTPWNDVALUE' in config['DEFAULT'] else 10
+        NETWORK_SIZE = config['DEFAULT']['NETSIZE'] if 'NETSIZE' in config['DEFAULT'] else 5
+
+    net = Network(size=NETWORK_SIZE)
     attacker = Attacker()
-    defender = Defender()
+    defender = PassiveDefender()
     for t in range(GAME_LENGTH):
         attacker_done = False
         defender_done = False

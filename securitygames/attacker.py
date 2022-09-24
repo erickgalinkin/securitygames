@@ -1,3 +1,5 @@
+import random
+
 class Attacker:
     """
     Base attacker class
@@ -86,6 +88,7 @@ class Attacker:
                 return False
             if net.nodes[self.location]["data"].is_ransomwared:
                 print("Already installed ransomware!")
+                return False
             net.nodes[self.location]["data"].install_malware("ransomware", self.is_admin)
             return True
         elif action == 8:
@@ -158,12 +161,31 @@ class DefaultAttacker(Attacker):
     def act(self, net):
         if self.location == "internet" and len(self.accessible_nodes) == 0:
             return self._scan_network(net)
-        elif len(self.accessible_nodes - self.scanned_from) == 0:
+        elif len(self.accessible_nodes) - len(self.scanned_from) == 0:
             return self._scan_network(net)
         elif self.location == "internet" and len(self.accessible_nodes) > 0:
-            node = self.choose_best_node()
+            # node = self.choose_best_node()
             self._exploit_node(net, self.accessible_nodes[0])
-        elif
+            return True
+        elif self.location != "internet":
+            if not self.is_admin:
+                self.is_admin = self._privesc(net)
+                return True
+            if not net.nodes[self.location]["data"].is_ransomwared:
+                net.nodes[self.location]["data"].install_malware("ransomware", self.is_admin)
+                return True
+            if self.location not in self.scanned_from:
+                return self._scan_network(net)
+            else:
+                p = random.random()
+                if p > 0.8:
+                    self._execute_ransomware(net)
+                    return True
+                node_to_move = random.choice([x for x in self.accessible_nodes if x != self.location])
+                lateral_movement = net.nodes[node_to_move]["data"].lateral_movement(self.is_admin)
+                if lateral_movement:
+                    self.location = node_to_move
+                return True
 
     def _inspect_node(self, net, node_to_inspect):
         if node_to_inspect == "current":

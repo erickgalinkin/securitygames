@@ -1,5 +1,6 @@
 import random
 
+
 class Defender:
     def __init__(self):
         self.alerts = list()
@@ -81,7 +82,7 @@ class Defender:
                 item_components = item.split(",")
                 if item_components[0] == "ALERT":
                     alert_list.append(item)
-        new_alerts = True if alert_list != self.alerts else False
+        new_alerts = list(set(alert_list) - set(self.alerts))
         self.alerts = alert_list
         return new_alerts
 
@@ -166,7 +167,7 @@ class PassiveDefender(Defender):
         new_alerts = self._check_alerts(net)
         if not new_alerts:
             return True
-        active_alert = self.alerts[0]
+        active_alert = new_alerts[0]
         affected_node, alert_msg = self._parse_alert(active_alert)
         action = self.next_best_action(net, affected_node, alert_msg)
         return action

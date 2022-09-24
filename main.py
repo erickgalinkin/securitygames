@@ -1,11 +1,21 @@
 from securitygames.environment import Network
-from securitygames.attacker import Attacker
+from securitygames.attacker import DefaultAttacker
 from securitygames.defender import PassiveDefender
 from argparse import ArgumentParser
 from configparser import ConfigParser
 
+
+# Default game values
+GAME_LENGTH = 15
+NETWORK_SIZE = 5
+TARGET_PWND_VALUE = 10
+TARGET_RANSOM_VALUE = 25
+RANSOM_VALUE = 5
+ATTACKER_PROFILE = None
+DEFENDER_PROFILE = None
+
 parser = ArgumentParser(description="Play or simulate security games.")
-parser.add_argument("-c", "--config", action='store', type=str, help="Path to configuration file")
+parser.add_argument("-c", "--config", action='store', type=str, help="Path to configuration file", required=False)
 
 
 def attacker_wins(net):
@@ -48,14 +58,18 @@ if __name__ == "__main__":
     if args.config:
         config = ConfigParser()
         config.read(args.config)
-        GAME_LENGTH = config['DEFAULT']['GAMELENGTH'] if 'GAMELENGTH' in config['DEFAULT'] else 15
-        RANSOM_VALUE = config['DEFAULT']['RANSOMVALUE'] if 'RANSOMVALUE' in config['DEFAULT'] else 5
-        TARGET_RANSOM_VALUE = config['DEFAULT']['TGTRANSOMVALUE'] if 'TGTRANSOMVALUE' in config['DEFAULT'] else 25
-        TARGET_PWND_VALUE = config['DEFAULT']['TGTPWNDVALUE'] if 'TGTPWNDVALUE' in config['DEFAULT'] else 10
-        NETWORK_SIZE = config['DEFAULT']['NETSIZE'] if 'NETSIZE' in config['DEFAULT'] else 5
+        if "GAME" in config:
+            if 'GAMELENGTH' in config['GAME']:
+                GAME_LENGTH = config['GAME']['GAMELENGTH']
+            if 'NETSIZE' in config['GAME']:
+                NETWORK_SIZE = config['GAME']['NETSIZE']
+        if "ATTACKER" in config:
+            ATTACKER_PROFILE = dict(config['ATTACKER'])
+        if "DEFENDER" in config:
+            DEFENDER_PROFILE = dict(config['DEFENDER'])
 
     net = Network(size=NETWORK_SIZE)
-    attacker = Attacker()
+    attacker = DefaultAttacker()
     defender = PassiveDefender()
     for t in range(GAME_LENGTH):
         attacker_done = False

@@ -132,4 +132,4 @@ dmypy.json
 .idea/
 
 # Ignore tests
-tests/
+tests_*.py
